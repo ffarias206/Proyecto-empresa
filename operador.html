@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plataforma — Operador Interno</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#0a0b12; --panel:#121422; --elev:#171a2a; --ink:#eef2ff; --muted:#a6b0cf;
+      --acc:#67e8f9; --acc2:#a78bfa; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+      --grid:1200px; --r:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:linear-gradient(180deg,#0a0b12 0%, #0b0f1c 60%, #0a0b12 100%);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto;min-height:100%}
+    a{color:var(--acc);text-decoration:none}
+    .wrap{max-width:var(--grid);margin:0 auto;padding:0 18px}
+
+    /* Topbar */
+    .top{position:sticky;top:0;z-index:60;background:rgba(10,12,18,.6);backdrop-filter:blur(10px);border-bottom:1px solid #1d2240}
+    .top__bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px}
+    .brand{display:flex;gap:10px;align-items:center;font-weight:700}
+    .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:var(--shadow)}
+    .userchip{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.95rem}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #2a3563;border-radius:999px;font-size:.85rem;color:#dfe6fb}
+
+    /* Layout */
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:18px}
+    .side{position:sticky;top:64px;align-self:start}
+    .side__card{background:var(--panel);border:1px solid #1d2240;border-radius:16px;padding:16px}
+    .nav a{display:flex;gap:10px;align-items:center;padding:10px 12px;margin:6px 0;border:1px solid #202749;border-radius:12px;color:var(--ink);text-decoration:none;opacity:.9}
+    .nav a.active,.nav a:hover{border-color:#2a3563;opacity:1}
+
+    /* Panels */
+    section{display:none}
+    section.active{display:block}
+    .card{background:var(--panel);border:1px solid #1d2240;border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+    .grid{display:grid;gap:16px}
+    .g-2{grid-template-columns:1fr 1fr}
+    .g-3{grid-template-columns:1fr 1fr 1fr}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+    /* Forms & table */
+    input,select,textarea,button{font-family:inherit}
+    .field{display:grid;gap:6px}
+    .field input,.field select,.field textarea{background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px 12px;border-radius:12px}
+    .btn{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#0a0b12;border:none;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--ink);border:1px solid #2a3563}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px;border-bottom:1px solid #222a4a;text-align:left}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .kpi{background:var(--panel);border:1px solid #1d2240;border-radius:14px;padding:12px}
+    .kpi small{color:var(--muted)}
+
+    /* Pills */
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid #2a3563;color:#dfe6fb;font-size:.85rem}
+    .pill[data-s="abierta"]{border-color:var(--danger);color:#ffb4b4}
+    .pill[data-s="en_proceso"]{border-color:var(--warn);color:#ffd79d}
+    .pill[data-s="resuelta"]{border-color:var(--ok);color:#b9f6c1}
+    .pill[data-s="nueva"]{border-color:var(--acc2);color:#d8c8ff}
+    .pill[data-s="rechazada"]{border-color:var(--danger);color:#ffb4b4}
+
+    /* Chat */
+    .chat{display:grid;grid-template-rows:auto 1fr auto;gap:12px;height:520px}
+    .chat__stream{overflow:auto;border:1px solid #1d2240;border-radius:12px;background:var(--elev);padding:12px}
+    .msg{max-width:72%;margin:8px 0;padding:10px 12px;border-radius:12px}
+    .me{background:rgba(103,232,249,.12);border:1px solid #2a9fb3;margin-left:auto}
+    .other{background:#1b2040;border:1px solid #2a3563}
+    .msg small{display:block;color:var(--muted);margin-top:6px}
+    .chat__input{display:flex;gap:8px}
+    .chat__input input{flex:1}
+
+    /* Toast */
+    .toast{position:fixed;right:16px;bottom:16px;background:#11152a;border:1px solid #2a3563;padding:10px 12px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.3s}
+    .toast.show{opacity:1;transform:translateY(0)}
+
+    @media (max-width:1000px){
+      .layout{grid-template-columns:1fr}
+      .g-2,.g-3{grid-template-columns:1fr}
+      .kpis{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <!-- Topbar -->
+  <header class="top">
+    <div class="top__bar wrap">
+      <div class="brand"><span class="logo"></span> Plataforma — Operador Interno</div>
+      <div class="userchip">
+        <span id="chipNombre" class="chip">Operador</span>
+        <span id="chipArea" class="chip">Área: -</span>
+        <button class="btn ghost" id="btnLogout">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <main class="wrap" style="padding:18px 18px 60px">
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="side">
+        <div class="side__card">
+          <nav class="nav">
+            <a href="#alertas" data-link class="active">🛠️ Gestión de alertas</a>
+            <a href="#rrhh" data-link>🧑‍💼 Solicitudes RRHH</a>
+            <a href="#canal" data-link>💬 Canal interno</a>
+            <a href="#dashboard" data-link>📊 Dashboard</a>
+          </nav>
+          <hr style="border:none;border-top:1px solid #222a4a;margin:14px 0"/>
+          <div style="color:var(--muted);font-size:.95rem">
+            <b>Tip:</b> usá la solapa <em>Solicitudes RRHH</em> para pedir capacitaciones, legajos o personal.
+          </div>
+        </div>
+      </aside>
+
+      <!-- Views -->
+      <div id="views" class="grid">
+        <!-- ALERTAS -->
+        <section id="alertas" class="active">
+          <div class="card">
+            <h2>Gestión de alertas</h2>
+            <div class="toolbar" style="margin-bottom:10px">
+              <input id="fltTxt" placeholder="Buscar por título, medidor o ubicación" style="flex:1;background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+              <select id="fltArea" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <option value="">Área (todas)</option>
+                <option>Comunicación</option>
+                <option>Recursos Humanos</option>
+                <option>Técnico</option>
+                <option>Comercial</option>
+              </select>
+              <select id="fltEstado" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <option value="">Estado</option>
+                <option value="abierta">Abierta</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="resuelta">Resuelta</option>
+              </select>
+              <select id="fltCat" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <option value="">Categoría</option>
+                <option value="consumo">Consumo</option>
+                <option value="corte">Corte</option>
+                <option value="medidor">Medidor</option>
+                <option value="seguridad">Seguridad</option>
+              </select>
+              <select id="fltPri" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <option value="">Prioridad</option>
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+              </select>
+              <button class="btn ghost" id="btnClear">Limpiar</button>
+              <button class="btn" id="btnDemoAlerts">Cargar demo</button>
+            </div>
+
+            <div style="overflow:auto">
+              <table class="table" id="tablaAlertasOp">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Título</th><th>Cat.</th><th>Prior.</th><th>Medidor</th><th>Ubicación</th><th>Estado</th><th>Área</th><th>Propietario</th><th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- RRHH: solicitudes (para TODAS las áreas) -->
+        <section id="rrhh">
+          <div class="grid">
+            <div class="card">
+              <h2>Solicitudes a RRHH</h2>
+              <p class="muted" style="margin-top:-6px">Creá pedidos a RRHH: <b>Capacitaciones</b>, <b>Info de legajo</b>, <b>Solicitud de personal</b> u <b>Otra</b>.</p>
+              <div class="grid g-3">
+                <div class="field">
+                  <label>Tu área</label>
+                  <select id="sol_area">
+                    <option>Comunicación</option>
+                    <option>Recursos Humanos</option>
+                    <option>Técnico</option>
+                    <option>Comercial</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Tipo de solicitud</label>
+                  <select id="sol_tipo">
+                    <option value="capacitacion">Capacitación</option>
+                    <option value="info_legajo">Información de legajo</option>
+                    <option value="personal">Solicitud de personal</option>
+                    <option value="otra">Otra</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Prioridad</label>
+                  <select id="sol_pri"><option>Media</option><option>Alta</option><option>Baja</option></select>
+                </div>
+              </div>
+
+              <!-- Capacitaciones -->
+              <div id="formCap" class="grid g-2" style="margin-top:10px">
+                <div class="field"><label>Tema / Curso</label><input id="cap_tema" placeholder="Ej: Atención al cliente, Seguridad eléctrica…"></div>
+                <div class="field"><label>Objetivo</label><input id="cap_obj" placeholder="¿Qué buscás mejorar?"></div>
+                <div class="field"><label>Asistentes</label><input id="cap_asist" placeholder="Ej: Equipo Comercial, 12 personas"></div>
+                <div class="field"><label>Modalidad</label><select id="cap_mod"><option>Presencial</option><option>Virtual</option><option>Mixta</option></select></div>
+                <div class="field"><label>Fecha preferida</label><input id="cap_fecha" type="date"></div>
+                <div class="field"><label>Notas</label><input id="cap_notas" placeholder="Detalles logísticos, horarios, etc."></div>
+              </div>
+
+              <!-- Info de legajo -->
+              <div id="formLeg" class="grid g-2" style="display:none;margin-top:10px">
+                <div class="field"><label>Persona / Legajo</label><input id="leg_persona" placeholder="Nombre y/o legajo"></div>
+                <div class="field"><label>Tipo de información</label><select id="leg_tipo"><option>Historial de capacitaciones</option><option>Datos de contrato</option><option>Licencias y ausencias</option><option>Otra</option></select></div>
+                <div class="field" style="grid-column:1/-1"><label>Detalle</label><textarea id="leg_det" rows="3" placeholder="Indicá qué necesitás consultar o justificar"></textarea></div>
+              </div>
+
+              <!-- Solicitud de personal -->
+              <div id="formPer" class="grid g-2" style="display:none;margin-top:10px">
+                <div class="field"><label>Perfil requerido</label><input id="per_perfil" placeholder="Ej: Técnico electricista Jr."></div>
+                <div class="field"><label>Tipo de contratación</label><select id="per_tipo"><option>Efectivo</option><option>Temporal</option><option>Pasantía</option></select></div>
+                <div class="field"><label>Urgencia</label><select id="per_urg"><option>Media</option><option>Alta</option><option>Baja</option></select></div>
+                <div class="field"><label>Fecha estimada de ingreso</label><input id="per_fecha" type="date"></div>
+                <div class="field" style="grid-column:1/-1"><label>Justificación</label><textarea id="per_just" rows="3" placeholder="¿Por qué necesitás cubrir este puesto?"></textarea></div>
+              </div>
+
+              <!-- Otra -->
+              <div id="formOtra" class="grid" style="display:none;margin-top:10px">
+                <div class="field"><label>Asunto</label><input id="otr_asunto" placeholder="Ej: Evaluación, alta/baja, nómina…"></div>
+                <div class="field"><label>Descripción</label><textarea id="otr_desc" rows="3"></textarea></div>
+              </div>
+
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn" id="btnEnviarSol">Enviar solicitud</button>
+                <button class="btn ghost" id="btnDemoSol">Cargar ejemplo</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Mis solicitudes</h3>
+              <div class="toolbar">
+                <input id="mis_busca" placeholder="Buscar por asunto/tema" style="flex:1;background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <select id="mis_estado" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                  <option value="">Estado</option><option value="nueva">Nueva</option><option value="en_proceso">En proceso</option><option value="resuelta">Resuelta</option><option value="rechazada">Rechazada</option>
+                </select>
+              </div>
+              <div style="overflow:auto;margin-top:10px">
+                <table class="table" id="tablaMis">
+                  <thead><tr><th>#</th><th>Tipo</th><th>Asunto/Tema</th><th>Área</th><th>Prioridad</th><th>Estado</th><th>Actualizado</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Gestión visible solo para RRHH -->
+            <div class="card" id="rrhh_gestion" style="display:none">
+              <h3>Gestión de solicitudes (RRHH)</h3>
+              <div class="toolbar" style="margin-bottom:10px">
+                <input id="fltTxtRR" placeholder="Buscar por asunto, área o solicitante" style="flex:1;background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <select id="fltTipoRR" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                  <option value="">Tipo</option><option value="capacitacion">Capacitación</option><option value="info_legajo">Info de legajo</option><option value="personal">Personal</option><option value="otra">Otra</option>
+                </select>
+                <select id="fltEstadoRR" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                  <option value="">Estado</option><option value="nueva">Nueva</option><option value="en_proceso">En proceso</option><option value="resuelta">Resuelta</option><option value="rechazada">Rechazada</option>
+                </select>
+                <select id="fltPriRR" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                  <option value="">Prioridad</option><option>Alta</option><option>Media</option><option>Baja</option>
+                </select>
+                <button class="btn" id="btnExportRR">Exportar CSV</button>
+              </div>
+              <div style="overflow:auto">
+                <table class="table" id="tablaRRHH">
+                  <thead><tr><th>#</th><th>Tipo</th><th>Asunto/Tema</th><th>Área</th><th>Prioridad</th><th>Solicitante</th><th>Estado</th><th>Asignado</th><th>Acciones</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CANAL INTERNO -->
+        <section id="canal">
+          <div class="grid g-2">
+            <div class="card chat">
+              <div>
+                <h2>Canal interno</h2>
+                <div class="toolbar" style="margin-top:6px">
+                  <label class="chip"><input type="radio" name="canal" value="general" checked> &nbsp;#general</label>
+                  <label class="chip"><input type="radio" name="canal" value="mesa"> &nbsp;#mesa-de-ayuda</label>
+                  <span class="chip" id="chipCanalArea">Área: -</span>
+                </div>
+              </div>
+              <div class="chat__stream" id="chatStream"></div>
+              <div class="chat__input">
+                <input id="chatMsg" placeholder="Escribí un mensaje… (@comunicacion, @rrhh, @tecnico, @comercial)">
+                <input id="chatFile" type="file" style="display:none">
+                <button class="btn" id="chatSend">Enviar</button>
+                <button class="btn ghost" id="chatAdj">Adjuntar</button>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Buenas prácticas de coordinación</h3>
+              <ul style="color:var(--muted);line-height:1.7;margin-top:0">
+                <li><b>Contexto y objetivo</b>: 1–2 líneas con el problema y el “done”.</li>
+                <li><b>Asignación clara</b>: etiquetá el área o a la persona responsable.</li>
+                <li><b>Seguimiento</b>: compartí el estado al cambiar a <em>en proceso</em> o <em>resuelta</em>.</li>
+                <li><b>Post-mortem breve</b>: aprendizajes para evitar recurrencias.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- DASHBOARD -->
+        <section id="dashboard">
+          <div class="grid">
+            <div class="toolbar" style="justify-content:flex-end">
+              <label class="chip"><input type="checkbox" id="onlyMyArea"> &nbsp;Ver solo mi área</label>
+            </div>
+            <div class="kpis">
+              <div class="kpi"><small>Total alertas</small><div style="font-size:1.8rem" id="kpiTotal">0</div></div>
+              <div class="kpi"><small>Abiertas</small><div style="font-size:1.8rem" id="kpiAbiertas">0</div></div>
+              <div class="kpi"><small>En proceso</small><div style="font-size:1.8rem" id="kpiProceso">0</div></div>
+              <div class="kpi"><small>Resueltas</small><div style="font-size:1.8rem" id="kpiResueltas">0</div></div>
+            </div>
+            <div class="grid g-3">
+              <div class="card"><h3 style="margin-top:0">Alertas por día (7d)</h3><canvas id="chartLine" height="120"></canvas></div>
+              <div class="card"><h3 style="margin-top:0">Por categoría</h3><canvas id="chartPie" height="120"></canvas></div>
+              <div class="card"><h3 style="margin-top:0">Tiempo prom. de resolución (h) por categoría</h3><canvas id="chartBar" height="120"></canvas></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Guardado</div>
+
+  <script>
+    // ===== Utils / sesión / storage =====
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const load = (k, d=null) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? d } catch { return d } };
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    const toast = (msg)=>{ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); };
+
+    const KEY_SESSION='mx_session';
+    const KEY_ALERTS='alerts_v1';
+    const KEY_CHAT_GEN='chat_op_general_v1';
+    const KEY_CHAT_MESA='chat_op_mesa_v1';
+    // RRHH storage
+    const KEY_RRHH_SOL='rrhh_solicitudes_v1'; // [{id,tipo,area,prio,asunto,detalle,solicitanteEmail,estado,asignado,ts,updated,resolvedTs}]
+
+    // Guardia operador
+    const sess = load(KEY_SESSION);
+    (function guard(){
+      if(!sess || sess.role!=='operador'){
+        alert('Acceso restringido. Iniciá sesión como Operador.');
+        location.href='indexLogin.html';
+        return;
+      }
+      $('#chipNombre').textContent = sess.nombre || 'Operador';
+      $('#chipArea').textContent = 'Área: ' + (sess.area || '-');
+      $('#chipCanalArea').textContent = 'Área: ' + (sess.area || '-');
+      // Defaults RRHH form
+      $('#sol_area').value = sess.area || 'Comunicación';
+      // Si es RRHH, muestra gestión
+      if(sess.area === 'Recursos Humanos'){
+        $('#rrhh_gestion').style.display = '';
+      }
+    })();
+
+    // Router
+    function navTo(hash){
+      $$('.nav a').forEach(a=>a.classList.toggle('active', a.getAttribute('href')===hash));
+      $$('#views section').forEach(s=>s.classList.toggle('active', '#'+s.id===hash));
+      history.replaceState({},'',hash);
+    }
+    $$('.nav a[data-link]').forEach(a=>a.addEventListener('click', e=>{e.preventDefault();navTo(a.getAttribute('href'))}));
+    navTo(location.hash || '#alertas');
+
+    // Logout
+    $('#btnLogout').addEventListener('click', ()=>{
+      localStorage.removeItem(KEY_SESSION);
+      location.href='indexLogin.html';
+    });
+
+    // ====== Alertas (igual que antes) ======
+    function readAlerts(){ return load(KEY_ALERTS, []) }
+    function writeAlerts(arr){ save(KEY_ALERTS, arr); refreshTable(); refreshKPIs(); drawCharts(); }
+    function cid(){ return Math.random().toString(36).slice(2,9) }
+    function iso(daysOffset=0, hoursOffset=0){ const d=new Date(); d.setDate(d.getDate()+daysOffset); d.setHours(d.getHours()+hoursOffset); return d.toISOString() }
+
+    function refreshTable(){
+      const tbody = $('#tablaAlertasOp tbody');
+      if(!tbody) return;
+      const q = ($('#fltTxt')?.value||'').toLowerCase();
+      const fA = $('#fltArea')?.value||''; const fE = $('#fltEstado')?.value||''; const fC = $('#fltCat')?.value||''; const fP = $('#fltPri')?.value||'';
+      const arr = readAlerts().filter(a=>{
+        const text=(a.titulo+' '+a.medidor+' '+a.ubicacion).toLowerCase().includes(q);
+        const okA=!fA || a.area===fA;
+        const okE=!fE || a.estado===fE;
+        const okC=!fC || a.categoria===fC;
+        const okP=!fP || a.prioridad===fP;
+        return text && okA && okE && okC && okP;
+      });
+      tbody.innerHTML = arr.map((a,i)=>{
+        const selEstado = `
+          <select data-act="estado" data-id="${a.id}">
+            <option value="abierta" ${a.estado==='abierta'?'selected':''}>Abierta</option>
+            <option value="en_proceso" ${a.estado==='en_proceso'?'selected':''}>En proceso</option>
+            <option value="resuelta" ${a.estado==='resuelta'?'selected':''}>Resuelta</option>
+          </select>`;
+        const selPri = `
+          <select data-act="prioridad" data-id="${a.id}">
+            <option value="alta" ${a.prioridad==='alta'?'selected':''}>Alta</option>
+            <option value="media" ${a.prioridad==='media'?'selected':''}>Media</option>
+            <option value="baja" ${a.prioridad==='baja'?'selected':''}>Baja</option>
+          </select>`;
+        const selArea = `
+          <select data-act="area" data-id="${a.id}">
+            <option ${!a.area?'selected':''} value="">—</option>
+            <option ${a.area==='Comunicación'?'selected':''}>Comunicación</option>
+            <option ${a.area==='Recursos Humanos'?'selected':''}>Recursos Humanos</option>
+            <option ${a.area==='Técnico'?'selected':''}>Técnico</option>
+            <option ${a.area==='Comercial'?'selected':''}>Comercial</option>
+          </select>`;
+        const owner = a.owner ? a.owner : '—';
+        const pill = `<span class="pill" data-s="${a.estado}">${a.estado.replace('_',' ')}</span>`;
+        const btnTL = a.ownerEmail===sess.email ? `<button class="btn ghost" data-act="liberar" data-id="${a.id}">Liberar</button>` : `<button class="btn" data-act="tomar" data-id="${a.id}">Tomar</button>`;
+        return `<tr>
+          <td>${i+1}</td>
+          <td title="${a.desc||''}">${a.titulo}</td>
+          <td>${a.categoria}</td>
+          <td>${selPri}</td>
+          <td>${a.medidor||'-'}</td>
+          <td>${a.ubicacion||'-'}</td>
+          <td>${pill}<br>${selEstado}</td>
+          <td>${selArea}</td>
+          <td>${owner}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap">
+            ${btnTL}
+            <button class="btn ghost" data-act="nota" data-id="${a.id}">Nota</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+    ['#fltTxt','#fltArea','#fltEstado','#fltCat','#fltPri'].forEach(id=> $(id)?.addEventListener('input', refreshTable));
+    $('#btnClear')?.addEventListener('click', ()=>{ $('#fltTxt').value=''; $('#fltArea').value=''; $('#fltEstado').value=''; $('#fltCat').value=''; $('#fltPri').value=''; refreshTable(); });
+    $('#btnDemoAlerts')?.addEventListener('click', ()=>{
+      const arr = readAlerts();
+      if(!arr.length){
+        const demo=[
+          {id:cid(),titulo:'Corte sector Centro',categoria:'corte',prioridad:'alta',medidor:'CL-10021',ubicacion:'Microcentro',desc:'Baja tensión intermitente',adjunto:null,estado:'abierta',creador:'externo',creadorEmail:'cliente@demo.com',ts:iso(-2),area:'Técnico'},
+          {id:cid(),titulo:'Lecturas erráticas IoT',categoria:'medidor',prioridad:'media',medidor:'MTR-51022',ubicacion:'Los Tilos 455',desc:'Sensor posiblemente dañado',adjunto:null,estado:'en_proceso',creador:'externo',creadorEmail:'cliente@demo.com',ts:iso(-5),area:'Técnico',ownerEmail:'operador@demo.com',owner:'Operador Demo'},
+          {id:cid(),titulo:'Reclamo comunicación web',categoria:'consumo',prioridad:'baja',medidor:'CL-00912',ubicacion:'Altos del Norte',desc:'Duda sobre picos',adjunto:null,estado:'abierta',creador:'externo',creadorEmail:'cliente@demo.com',ts:iso(-1),area:'Comunicación'},
+          {id:cid(),titulo:'Riesgo de seguridad en pilar',categoria:'seguridad',prioridad:'alta',medidor:'CL-00401',ubicacion:'Av. Central 1200',desc:'Cables expuestos',adjunto:null,estado:'resuelta',creador:'externo',creadorEmail:'cliente@demo.com',ts:iso(-7),resolvedTs:iso(-6,-3),area:'Técnico',ownerEmail:'operador@demo.com',owner:'Operador Demo'}
+        ];
+        writeAlerts(demo.concat(arr));
+      } else {
+        toast('Ya hay alertas cargadas');
+      }
+    });
+
+    document.addEventListener('change', (e)=>{
+      const el=e.target; const id=el.getAttribute?.('data-id'); if(!id) return;
+      const arr=readAlerts(); const a=arr.find(x=>x.id===id); if(!a) return;
+      if(el.getAttribute('data-act')==='estado'){ const prev=a.estado; a.estado=el.value; if(a.estado==='resuelta'&&!a.resolvedTs){a.resolvedTs=new Date().toISOString()} if(prev==='resuelta'&&a.estado!=='resuelta'){a.resolvedTs=null} writeAlerts(arr); toast('Estado actualizado'); }
+      if(el.getAttribute('data-act')==='prioridad'){ a.prioridad=el.value; writeAlerts(arr); toast('Prioridad actualizada'); }
+      if(el.getAttribute('data-act')==='area'){ a.area=el.value||null; writeAlerts(arr); toast('Área asignada'); }
+    });
+    document.addEventListener('click',(e)=>{
+      const act=e.target?.getAttribute?.('data-act'); if(!act) return;
+      const id=e.target.getAttribute('data-id');
+      const arr=readAlerts(); const a=arr.find(x=>x.id===id); if(!a) return;
+      if(act==='tomar'){ a.ownerEmail=sess.email; a.owner=sess.nombre||'Operador'; if(a.estado==='abierta'){a.estado='en_proceso'} writeAlerts(arr); toast('Alerta tomada'); }
+      if(act==='liberar'){ a.ownerEmail=null; a.owner=null; writeAlerts(arr); toast('Alerta liberada'); }
+      if(act==='nota'){ const txt=prompt('Agregar nota interna:', a.lastNote||''); if(txt!=null){ a.lastNote=txt; a.notes=(a.notes||[]); a.notes.push({by:sess.email,txt,ts:new Date().toISOString()}); writeAlerts(arr); toast('Nota guardada'); } }
+    });
+
+    // ===== Chat interno =====
+    function chatKey(){ return document.querySelector('input[name="canal"]:checked').value==='general' ? KEY_CHAT_GEN : KEY_CHAT_MESA }
+    function readChat(){ return load(chatKey(), []) }
+    function writeChat(arr){ save(chatKey(), arr); renderChat(); }
+    function renderChat(){
+      const box=$('#chatStream'); if(!box) return; box.innerHTML='';
+      readChat().forEach(m=>{
+        const div=document.createElement('div'); div.className='msg '+(m.email===sess.email?'me':'other');
+        const file = m.fileName ? `<small>📎 ${m.fileName}</small>` : '';
+        const safe = m.text
+          .replace(/@comunicacion/gi,'<b>@comunicacion</b>')
+          .replace(/@rrhh/gi,'<b>@rrhh</b>')
+          .replace(/@tecnico/gi,'<b>@tecnico</b>')
+          .replace(/@comercial/gi,'<b>@comercial</b>');
+        div.innerHTML = `<div>${safe}${file}</div><small>${sess.area||'-'} • ${m.email} • ${new Date(m.ts).toLocaleString('es-AR')}</small>`;
+        box.appendChild(div);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+    function sendChat(){
+      const input=$('#chatMsg'); const text=input?.value.trim(); if(!text) return;
+      const fileInp=$('#chatFile'); const fileName=fileInp?.files?.[0]?.name || null;
+      const arr=readChat(); arr.push({id:cid(),text,area:sess.area||'-',email:sess.email,ts:new Date().toISOString(),fileName});
+      writeChat(arr); input.value=''; if(fileInp) fileInp.value='';
+    }
+    $('#chatSend')?.addEventListener('click', sendChat);
+    $('#chatAdj')?.addEventListener('click', ()=> $('#chatFile').click());
+    $('#chatMsg')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendChat() } });
+    $$('input[name="canal"]').forEach(r=>r.addEventListener('change', renderChat));
+
+    // ===== Dashboard =====
+    function computeKPIs(source){
+      const total = source.length;
+      const abiertas = source.filter(x=>x.estado==='abierta').length;
+      const proceso = source.filter(x=>x.estado==='en_proceso').length;
+      const resueltas = source.filter(x=>x.estado==='resuelta').length;
+      return {total,abiertas,proceso,resueltas}
+    }
+    function refreshKPIs(){
+      const src = filteredForKPI();
+      const k=computeKPIs(src);
+      $('#kpiTotal').textContent=k.total; $('#kpiAbiertas').textContent=k.abiertas; $('#kpiProceso').textContent=k.proceso; $('#kpiResueltas').textContent=k.resueltas;
+    }
+    function filteredForKPI(){
+      const all = readAlerts();
+      return $('#onlyMyArea')?.checked && sess.area ? all.filter(a=>a.area===sess.area) : all;
+    }
+    let lineChart, pieChart, barChart;
+    function drawCharts(){
+      if(!$('#chartLine')) return;
+      const src = filteredForKPI();
+      const days=[...Array(7)].map((_,i)=>{const d=new Date(); d.setDate(d.getDate()-(6-i)); d.setHours(0,0,0,0); return d});
+      const counts=days.map(d=> src.filter(a=> new Date(a.ts).setHours(0,0,0,0)===d.getTime()).length );
+      const labels=days.map(d=> d.toLocaleDateString('es-AR'));
+      const cats=['consumo','corte','medidor','seguridad'];
+      const byCat=cats.map(c=> src.filter(a=>a.categoria===c).length );
+      const msH=3600000;
+      const avgByCat=cats.map(c=>{
+        const items=src.filter(a=>a.categoria===c && a.resolvedTs);
+        if(!items.length) return 0;
+        const hs = items.map(a=>(new Date(a.resolvedTs)-new Date(a.ts))/msH);
+        return Math.round(hs.reduce((s,x)=>s+x,0)/hs.length);
+      });
+      if(lineChart) lineChart.destroy(); if(pieChart) pieChart.destroy(); if(barChart) barChart.destroy();
+      lineChart=new Chart($('#chartLine'),{type:'line',data:{labels,datasets:[{label:'Alertas/día',data:counts,tension:.35}]},options:{responsive:true,plugins:{legend:{display:false}}}});
+      pieChart=new Chart($('#chartPie'),{type:'doughnut',data:{labels:cats,datasets:[{data:byCat}]},options:{plugins:{legend:{position:'bottom'}}}});
+      barChart=new Chart($('#chartBar'),{type:'bar',data:{labels:cats,datasets:[{label:'Horas',data:avgByCat}]} ,options:{plugins:{legend:{display:false}}}});
+    }
+    $('#onlyMyArea')?.addEventListener('change', ()=>{ refreshKPIs(); drawCharts(); });
+
+    // ===== RRHH: lógica común =====
+    function readSol(){ return load(KEY_RRHH_SOL, []) }
+    function writeSol(arr){ save(KEY_RRHH_SOL, arr); renderMis(); renderRRHH(); }
+
+    // Mostrar/ocultar subformularios
+    const tipoSel = $('#sol_tipo');
+    function toggleForms(){
+      const t = tipoSel.value;
+      $('#formCap').style.display = t==='capacitacion' ? '' : 'none';
+      $('#formLeg').style.display = t==='info_legajo' ? '' : 'none';
+      $('#formPer').style.display = t==='personal' ? '' : 'none';
+      $('#formOtra').style.display = t==='otra' ? '' : 'none';
+    }
+    tipoSel?.addEventListener('change', toggleForms); toggleForms();
+
+    // Enviar solicitud
+    $('#btnEnviarSol')?.addEventListener('click', ()=>{
+      const area = $('#sol_area').value;
+      const tipo = $('#sol_tipo').value;
+      const prio = $('#sol_pri').value;
+      let asunto='', detalle='';
+
+      if(tipo==='capacitacion'){
+        asunto = ($('#cap_tema').value||'').trim();
+        detalle = `Objetivo: ${$('#cap_obj').value||''}; Asistentes: ${$('#cap_asist').value||''}; Modalidad: ${$('#cap_mod').value||''}; Fecha: ${$('#cap_fecha').value||''}; Notas: ${$('#cap_notas').value||''}`.trim();
+      }else if(tipo==='info_legajo'){
+        const persona = ($('#leg_persona').value||'').trim();
+        asunto = persona ? `Información de legajo: ${persona}` : 'Información de legajo';
+        detalle = `Tipo: ${$('#leg_tipo').value||''}; Detalle: ${( $('#leg_det').value||'' ).replace(/\n/g,' ')}`.trim();
+      }else if(tipo==='personal'){
+        asunto = ($('#per_perfil').value||'').trim();
+        detalle = `Tipo: ${$('#per_tipo').value||''}; Urgencia: ${$('#per_urg').value||''}; Fecha ingreso: ${$('#per_fecha').value||''}; Justificación: ${( $('#per_just').value||'' ).replace(/\n/g,' ')}`.trim();
+      }else{
+        asunto = ($('#otr_asunto').value||'').trim();
+        detalle = ($('#otr_desc').value||'').trim();
+      }
+
+      if(!asunto){ toast('Completá el asunto/tema'); return; }
+
+      const arr = readSol();
+      arr.unshift({id:cid(),tipo,area,prio,asunto,detalle,solicitanteEmail:sess.email,estado:'nueva',asignado:null,ts:new Date().toISOString(),updated:new Date().toISOString()});
+      writeSol(arr);
+      toast('Solicitud enviada a RRHH');
+    });
+
+    // Demo rápida
+    $('#btnDemoSol')?.addEventListener('click', ()=>{
+      const arr = readSol();
+      arr.unshift({id:cid(),tipo:'capacitacion',area:sess.area||'Comercial',prio:'Alta',asunto:'Curso Ventas consultivas',detalle:'Mejorar tasa de cierre',solicitanteEmail:sess.email,estado:'nueva',asignado:null,ts:new Date().toISOString(),updated:new Date().toISOString()});
+      writeSol(arr); toast('Ejemplo cargado');
+    });
+
+    // Mis solicitudes
+    function renderMis(){
+      const tb = $('#tablaMis tbody'); if(!tb) return;
+      const q = ($('#mis_busca')?.value||'').toLowerCase();
+      const est = $('#mis_estado')?.value||'';
+      const data = readSol().filter(s=> s.solicitanteEmail===sess.email );
+      const filt = data.filter(s=>{
+        const hit = (s.asunto+' '+(s.detalle||'')).toLowerCase().includes(q);
+        const ok = !est || s.estado===est; return hit && ok;
+      });
+      tb.innerHTML = filt.map((s,i)=>`
+        <tr>
+          <td>${i+1}</td>
+          <td>${s.tipo}</td>
+          <td title="${s.detalle||''}">${s.asunto}</td>
+          <td>${s.area}</td>
+          <td>${s.prio}</td>
+          <td><span class="pill" data-s="${s.estado}">${s.estado.replace('_',' ')}</span></td>
+          <td>${new Date(s.updated||s.ts).toLocaleString('es-AR')}</td>
+        </tr>
+      `).join('');
+    }
+    $('#mis_busca')?.addEventListener('input', renderMis);
+    $('#mis_estado')?.addEventListener('input', renderMis);
+
+    // Gestión RRHH (solo visible si sess.area==='Recursos Humanos')
+    function renderRRHH(){
+      const table = $('#tablaRRHH'); if(!table) return;
+      const q = ($('#fltTxtRR')?.value||'').toLowerCase();
+      const t = $('#fltTipoRR')?.value||'';
+      const e = $('#fltEstadoRR')?.value||'';
+      const p = $('#fltPriRR')?.value||'';
+      const arr = readSol().filter(s=>{
+        const hit = (s.asunto+' '+(s.area||'')+' '+(s.solicitanteEmail||'')).toLowerCase().includes(q);
+        const okT=!t||s.tipo===t, okE=!e||s.estado===e, okP=!p||s.prio===p; return hit && okT && okE && okP;
+      });
+      table.querySelector('tbody').innerHTML = arr.map((s,i)=>{
+        const selE = `
+          <select data-rr="estado" data-id="${s.id}">
+            <option value="nueva" ${s.estado==='nueva'?'selected':''}>Nueva</option>
+            <option value="en_proceso" ${s.estado==='en_proceso'?'selected':''}>En proceso</option>
+            <option value="resuelta" ${s.estado==='resuelta'?'selected':''}>Resuelta</option>
+            <option value="rechazada" ${s.estado==='rechazada'?'selected':''}>Rechazada</option>
+          </select>`;
+        const selP = `
+          <select data-rr="prio" data-id="${s.id}">
+            <option ${s.prio==='Alta'?'selected':''}>Alta</option>
+            <option ${s.prio==='Media'?'selected':''}>Media</option>
+            <option ${s.prio==='Baja'?'selected':''}>Baja</option>
+          </select>`;
+        const asign = `<input data-rr="asign" data-id="${s.id}" value="${s.asignado||''}" placeholder="Responsable">`;
+        const btnNota = `<button class="btn ghost" data-rr="nota" data-id="${s.id}">Nota</button>`;
+        return `
+          <tr>
+            <td>${i+1}</td>
+            <td>${s.tipo}</td>
+            <td title="${s.detalle||''}">${s.asunto}</td>
+            <td>${s.area}</td>
+            <td>${selP}</td>
+            <td>${s.solicitanteEmail||'—'}</td>
+            <td><span class="pill" data-s="${s.estado}">${s.estado.replace('_',' ')}</span><br>${selE}</td>
+            <td>${asign}</td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap">
+              ${btnNota}
+              <button class="btn" data-rr="resolver" data-id="${s.id}">Resuelta</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+    ['#fltTxtRR','#fltTipoRR','#fltEstadoRR','#fltPriRR'].forEach(id=> $(id)?.addEventListener('input', renderRRHH));
+
+    document.addEventListener('change', (e)=>{
+      const id=e.target?.getAttribute?.('data-id'); const rr=e.target?.getAttribute?.('data-rr');
+      if(!rr || !id) return;
+      const arr=readSol(); const s=arr.find(x=>x.id===id); if(!s) return;
+      if(rr==='estado'){ s.estado=e.target.value; if(s.estado==='resuelta' && !s.resolvedTs) s.resolvedTs=new Date().toISOString(); s.updated=new Date().toISOString(); writeSol(arr); toast('Estado actualizado'); }
+      if(rr==='prio'){ s.prio=e.target.value; s.updated=new Date().toISOString(); writeSol(arr); toast('Prioridad actualizada'); }
+      if(rr==='asign'){ s.asignado=e.target.value; s.updated=new Date().toISOString(); save(KEY_RRHH_SOL,arr); }
+    });
+
+    document.addEventListener('click', (e)=>{
+      const rr=e.target?.getAttribute?.('data-rr'); if(!rr) return;
+      const id=e.target.getAttribute('data-id');
+      const arr=readSol(); const s=arr.find(x=>x.id===id); if(!s) return;
+      if(rr==='nota'){ const txt=prompt('Agregar nota interna:', s.lastNote||''); if(txt!=null){ s.lastNote=txt; s.notes=(s.notes||[]); s.notes.push({by:sess.email,txt,ts:new Date().toISOString()}); s.updated=new Date().toISOString(); writeSol(arr); toast('Nota guardada'); } }
+      if(rr==='resolver'){ s.estado='resuelta'; s.resolvedTs=new Date().toISOString(); s.updated=new Date().toISOString(); writeSol(arr); toast('Marcada como resuelta'); }
+    });
+
+    // Export CSV
+    function toCSV(rows){
+      const headers = Object.keys(rows[0]||{});
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      return [headers.join(',')].concat(rows.map(r=>headers.map(h=>esc(r[h])).join(','))).join('\n');
+    }
+    $('#btnExportRR')?.addEventListener('click', ()=>{
+      const data = readSol();
+      const csv = toCSV(data);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='solicitudes_rrhh.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // ===== Eventos globales / init =====
+    window.addEventListener('storage', ()=>{ refreshTable(); renderMis(); renderRRHH(); refreshKPIs(); drawCharts(); renderChat(); });
+    function init(){ refreshTable(); renderMis(); renderRRHH(); refreshKPIs(); drawCharts(); renderChat(); }
+    init();
+  </script>
+</body>
+</html>

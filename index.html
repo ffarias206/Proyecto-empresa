@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plataforma — Área Cliente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#0a0b12; --panel:#121422; --elev:#171a2a; --ink:#eef2ff; --muted:#a6b0cf;
+      --acc:#67e8f9; --acc2:#a78bfa; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+      --grid:1200px; --r:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:linear-gradient(180deg,#0a0b12 0%, #0b0f1c 60%, #0a0b12 100%);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto;min-height:100%}
+    a{color:var(--acc);text-decoration:none}
+    .wrap{max-width:var(--grid);margin:0 auto;padding:0 18px}
+
+    /* Topbar */
+    .top{position:sticky;top:0;z-index:60;background:rgba(10,12,18,.6);backdrop-filter:blur(10px);border-bottom:1px solid #1d2240}
+    .top__bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px}
+    .brand{display:flex;gap:10px;align-items:center;font-weight:700}
+    .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:var(--shadow)}
+    .userchip{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.95rem}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #2a3563;border-radius:999px;font-size:.85rem;color:#dfe6fb}
+
+    /* Layout */
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:18px}
+    .side{position:sticky;top:64px;align-self:start}
+    .side__card{background:var(--panel);border:1px solid #1d2240;border-radius:16px;padding:16px}
+    .nav a{display:flex;gap:10px;align-items:center;padding:10px 12px;margin:6px 0;border:1px solid #202749;border-radius:12px;color:var(--ink);text-decoration:none;opacity:.9}
+    .nav a.active,.nav a:hover{border-color:#2a3563;opacity:1}
+
+    /* Panels */
+    section{display:none}
+    section.active{display:block}
+    .card{background:var(--panel);border:1px solid #1d2240;border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+    .grid{display:grid;gap:16px}
+    .g-2{grid-template-columns:1fr 1fr}
+    .g-3{grid-template-columns:1fr 1fr 1fr}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+    /* Forms & table */
+    input,select,textarea,button{font-family:inherit}
+    .field{display:grid;gap:6px}
+    .field input,.field select,.field textarea{background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px 12px;border-radius:12px}
+    .btn{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#0a0b12;border:none;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--ink);border:1px solid #2a3563}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px;border-bottom:1px solid #222a4a;text-align:left}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .kpi{background:var(--panel);border:1px solid #1d2240;border-radius:14px;padding:12px}
+    .kpi small{color:var(--muted)}
+
+    /* Pills */
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid #2a3563;color:#dfe6fb;font-size:.85rem}
+    .pill[data-s="abierta"]{border-color:var(--danger);color:#ffb4b4}
+    .pill[data-s="en_proceso"]{border-color:var(--warn);color:#ffd79d}
+    .pill[data-s="resuelta"]{border-color:var(--ok);color:#b9f6c1}
+
+    /* Toast */
+    .toast{position:fixed;right:16px;bottom:16px;background:#11152a;border:1px solid #2a3563;padding:10px 12px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.3s}
+    .toast.show{opacity:1;transform:translateY(0)}
+
+    @media (max-width:1000px){
+      .layout{grid-template-columns:1fr}
+      .g-2,.g-3{grid-template-columns:1fr}
+      .kpis{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <!-- Topbar -->
+  <header class="top">
+    <div class="top__bar wrap">
+      <div class="brand"><span class="logo"></span> Plataforma — Área Cliente</div>
+      <div class="userchip">
+        <span id="chipNombre" class="chip">Usuario</span>
+        <span id="chipTipo" class="chip">Tipo: -</span>
+        <button class="btn ghost" id="btnLogout">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <main class="wrap" style="padding:18px 18px 60px">
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="side">
+        <div class="side__card">
+          <nav class="nav">
+            <a href="#reportes" data-link class="active">🛠️ Reportes técnicos</a>
+            <a href="#comercial" data-link>💼 Gestiones comerciales</a>
+            <a href="#medidor" data-link>⚡ Medidor inteligente</a>
+            <a href="#institucional" data-link>🏛️ Comunicación institucional</a>
+          </nav>
+          <hr style="border:none;border-top:1px solid #222a4a;margin:14px 0"/>
+          <div style="color:var(--muted);font-size:.95rem">
+            <b>Área Cliente:</b> consultá facturas y consumo, reportá incidencias y revisá tu medidor IoT.
+          </div>
+        </div>
+      </aside>
+
+      <!-- Views -->
+      <div id="views" class="grid">
+        <!-- REPORTES TÉCNICOS -->
+        <section id="reportes" class="active">
+          <div class="grid g-2">
+            <div class="card">
+              <h2>Nuevo reporte técnico</h2>
+              <p style="color:var(--muted);margin-top:-6px">Mismos campos que la versión original, guardado local para pruebas.</p>
+              <div class="grid g-2">
+                <div class="field">
+                  <label>Título *</label>
+                  <input id="rep_titulo" placeholder="Ej: Pico de consumo en Manzana 12" required>
+                </div>
+                <div class="field">
+                  <label>Categoría *</label>
+                  <select id="rep_categoria">
+                    <option value="consumo">Consumo atípico</option>
+                    <option value="corte">Corte / Baja tensión</option>
+                    <option value="medidor">Medidor / IoT</option>
+                    <option value="seguridad">Seguridad / Riesgo</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Prioridad *</label>
+                  <select id="rep_prioridad">
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>ID de medidor / Cliente</label>
+                  <input id="rep_medidor" placeholder="Ej: MTR-48291 / CL-00912">
+                </div>
+                <div class="field">
+                  <label>Ubicación</label>
+                  <input id="rep_ubicacion" placeholder="Calle, número, barrio">
+                </div>
+                <div class="field">
+                  <label>Adjunto (opcional)</label>
+                  <input id="rep_file" type="file" accept="image/*">
+                </div>
+              </div>
+              <div class="field" style="margin-top:10px">
+                <label>Descripción</label>
+                <textarea id="rep_desc" rows="3" placeholder="Contá brevemente el problema…"></textarea>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn" id="btnCrear">Enviar reporte</button>
+                <button class="btn ghost" id="btnDemoRep">Cargar ejemplos</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Mis reportes</h2>
+              <div class="toolbar">
+                <input id="filtroTxt" placeholder="Buscar por título, medidor o ubicación" style="flex:1;background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                <select id="filtroEstado" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                  <option value="">Estado</option>
+                  <option value="abierta">Abierta</option>
+                  <option value="en_proceso">En proceso</option>
+                  <option value="resuelta">Resuelta</option>
+                </select>
+                <select id="filtroCat" style="background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px;border-radius:12px">
+                  <option value="">Categoría</option>
+                  <option value="consumo">Consumo</option>
+                  <option value="corte">Corte</option>
+                  <option value="medidor">Medidor</option>
+                  <option value="seguridad">Seguridad</option>
+                </select>
+              </div>
+              <div style="overflow:auto;margin-top:10px">
+                <table class="table" id="tablaAlertas">
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Título</th><th>Cat.</th><th>Prior.</th><th>Medidor</th><th>Ubicación</th><th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GESTIONES COMERCIALES -->
+        <section id="comercial">
+          <div class="grid">
+            <div class="card">
+              <h2>Identificación de cliente</h2>
+              <div class="grid g-2">
+                <div class="field">
+                  <label>ID de cliente</label>
+                  <input id="cli_id" placeholder="Ej: CL-00912">
+                </div>
+                <div class="field">
+                  <label>Tipo de cliente</label>
+                  <select id="cli_tipo">
+                    <option value="">Seleccionar</option>
+                    <option>Residencial</option>
+                    <option>Comercial</option>
+                    <option>Industrial</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn" id="cli_guardar">Guardar</button>
+                <span id="cli_estado" class="chip">Sin guardar</span>
+              </div>
+            </div>
+
+            <div class="grid g-2">
+              <div class="card">
+                <h3>Facturas & Consumos</h3>
+                <div class="toolbar">
+                  <button class="btn" id="btnExportFact">Exportar CSV</button>
+                  <button class="btn ghost" id="btnDemoFact">Recargar demo</button>
+                </div>
+                <div style="overflow:auto;margin-top:10px">
+                  <table class="table" id="tablaFacturas">
+                    <thead>
+                      <tr><th>Factura</th><th>Periodo</th><th>Consumo (kWh)</th><th>Importe</th><th>Estado</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3>Gestión de pagos (demo)</h3>
+                <p class="muted">Integración simulada con medios digitales.</p>
+                <div class="grid g-2">
+                  <button class="btn" data-pay="mp">Pagar con Mercado Pago</button>
+                  <button class="btn" data-pay="pmc">Pagar en PagoMisCuentas</button>
+                  <button class="btn" data-pay="link">Pagar con Red Link</button>
+                  <button class="btn ghost" id="btnVerPagos">Ver historial de pagos</button>
+                </div>
+                <div id="pagosLog" style="margin-top:12px;color:var(--muted);font-size:.95rem"></div>
+              </div>
+            </div>
+
+            <div class="grid g-2">
+              <div class="card">
+                <h3>Historial de consumo (12 meses)</h3>
+                <canvas id="chartConsumo" height="140"></canvas>
+              </div>
+              <div class="card">
+                <h3>Comparativas mensuales</h3>
+                <p class="muted">Actual vs. mes anterior y vs. mismo mes del año pasado.</p>
+                <div class="kpis">
+                  <div class="kpi"><small>Mes actual</small><div id="cmpActual" style="font-size:1.8rem">-</div></div>
+                  <div class="kpi"><small>Mes anterior</small><div id="cmpAnterior" style="font-size:1.8rem">-</div></div>
+                  <div class="kpi"><small>Interanual (mismo mes)</small><div id="cmpInter" style="font-size:1.8rem">-</div></div>
+                  <div class="kpi"><small>Variación vs anterior</small><div id="cmpVar" style="font-size:1.8rem">-</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MEDIDOR INTELIGENTE -->
+        <section id="medidor">
+          <div class="grid">
+            <div class="card">
+              <h2>Consulta de medidor inteligente</h2>
+              <div class="grid g-2">
+                <div class="field">
+                  <label>Número de medidor</label>
+                  <input id="mtr_input" placeholder="Ej: MTR-48291">
+                </div>
+                <div class="field">
+                  <label>&nbsp;</label>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn" id="mtr_buscar">Buscar</button>
+                    <button class="btn ghost" id="mtr_demo">Cargar demo</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid g-3">
+              <div class="card">
+                <small class="muted">Consumo diario (kWh)</small>
+                <div style="font-size:1.8rem" id="mtr_diario">-</div>
+              </div>
+              <div class="card">
+                <small class="muted">Consumo mensual (kWh)</small>
+                <div style="font-size:1.8rem" id="mtr_mensual">-</div>
+              </div>
+              <div class="card">
+                <small class="muted">Estado</small>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <span class="pill" id="mtr_estado">-</span>
+                  <span class="pill" id="mtr_servicio">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Tendencia diaria (30 días)</h3>
+              <canvas id="chartDaily" height="120"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- COMUNICACIÓN INSTITUCIONAL -->
+        <section id="institucional">
+          <div class="grid">
+            <div class="card">
+              <h2>Quiénes somos</h2>
+              <p>Somos una organización pública–privada dedicada a la gestión eficiente y transparente del servicio energético. Combinamos infraestructura crítica con tecnologías digitales —medidores inteligentes, analítica y automatización— para ofrecer un servicio más seguro, previsible y sostenible para la comunidad.</p>
+            </div>
+
+            <div class="grid g-3">
+              <div class="card">
+                <h3>Transparencia</h3>
+                <p class="muted">Publicamos indicadores de gestión, inversiones, cortes programados y avances de obras. Promovemos datos abiertos y canales de rendición de cuentas.</p>
+              </div>
+              <div class="card">
+                <h3>Misión</h3>
+                <p class="muted">Garantizar un suministro eléctrico confiable y asequible, mejorando la experiencia del usuario mediante información clara y respuesta oportuna.</p>
+              </div>
+              <div class="card">
+                <h3>Visión</h3>
+                <p class="muted">Ser referentes regionales en transición energética y servicio al cliente, integrando innovación, seguridad operativa y sostenibilidad.</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Valores</h3>
+              <ul style="color:var(--muted);line-height:1.8">
+                <li><b>Integridad:</b> decisiones trazables y comunicación honesta.</li>
+                <li><b>Servicio:</b> empatía, calidad y mejora continua.</li>
+                <li><b>Colaboración:</b> equipos y proveedores alineados al usuario.</li>
+                <li><b>Innovación:</b> adopción responsable de tecnologías.</li>
+                <li><b>Sostenibilidad:</b> eficiencia energética y cuidado ambiental.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Guardado</div>
+
+  <script>
+    // ===== Utilidades / sesión =====
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const load = (k, d=null) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? d } catch { return d } };
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    const fmtARS = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:2}).format(n);
+    const toast = (msg)=>{ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); };
+
+    const KEY_SESSION = 'mx_session';
+    const KEY_ALERTS = 'alerts_v1';
+    const KEY_FACT = 'mx_facturas';
+    const KEY_CONS = 'mx_consumo_mensual';
+    const KEY_PAGOS = 'mx_pagos';
+    const KEY_CLIENTE = 'mx_cliente_profile';
+    const KEY_MTRS = 'mx_medidores'; // [{num, daily[30], monthly, estado:'online/offline', servicio:'normal/alerta'}]
+
+    // Guardia de ruta: solo rol externo
+    (function guard(){
+    const sess = JSON.parse(localStorage.getItem(KEY_SESSION) || 'null');
+    if(!sess || sess.role!=='externo'){
+      alert('Acceso restringido. Iniciá sesión como Usuario/Cliente.');
+      location.href = 'indexLogin.html'; // <<--- tu login real
+      return;
+      }
+       // Botón salir (si no existe el listener, agregalo)
+        document.getElementById('btnLogout')?.addEventListener('click', ()=>{
+        localStorage.removeItem(KEY_SESSION);
+        location.href = 'indexLogin.html'; // <<--- tu login real
+  });
+
+      // Chips
+      $('#chipNombre').textContent = sess.nombre || 'Usuario';
+      $('#chipTipo').textContent = 'Tipo: ' + (load(KEY_CLIENTE)?.tipo || '-');
+    })();
+
+    // Logout
+    $('#btnLogout').addEventListener('click', ()=>{
+      localStorage.removeItem(KEY_SESSION);
+      location.href='login.html';
+    });
+
+    // Router simple
+    function navTo(hash){
+      $$('.nav a').forEach(a=>a.classList.toggle('active', a.getAttribute('href')===hash));
+      $$('#views section').forEach(s=>s.classList.toggle('active', '#'+s.id===hash));
+      history.replaceState({},'',hash);
+    }
+    $$('.nav a[data-link]').forEach(a=>a.addEventListener('click', e=>{e.preventDefault();navTo(a.getAttribute('href'))}));
+    navTo(location.hash || '#reportes');
+
+    // ====== DEMO DATA GENERATORS ======
+    function ensureDemoData(){
+      // Facturas (12 meses)
+      if(!load(KEY_FACT)){
+        const today=new Date(); const rows=[];
+        for(let i=0;i<12;i++){
+          const d=new Date(today); d.setMonth(d.getMonth()-i);
+          const periodo = d.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+          const consumo = Math.round(180+Math.random()*220);
+          const importe = consumo*120 + (Math.random()*5000);
+          rows.push({
+            id:'FAC-'+(1000+i),
+            periodo: periodo.replace(/^./, c=>c.toUpperCase()),
+            kwh: consumo,
+            importe: Math.round(importe*100)/100,
+            estado: Math.random()<0.75 ? 'Pagada' : 'Pendiente',
+            fecha:d.toISOString()
+          });
+        }
+        save(KEY_FACT, rows.reverse());
+      }
+      // Consumo mensual (12)
+      if(!load(KEY_CONS)){
+        const fact=load(KEY_FACT,[]);
+        const cons=fact.map(f=>({periodo:f.periodo,kwh:f.kwh}));
+        save(KEY_CONS, cons);
+      }
+      // Pagos
+      if(!load(KEY_PAGOS)) save(KEY_PAGOS, []);
+      // Cliente profile
+      if(!load(KEY_CLIENTE)) save(KEY_CLIENTE, {id:'CL-00912', tipo:'Residencial'});
+      // Medidores (3 demo)
+      if(!load(KEY_MTRS)){
+        const mkDaily=()=>Array.from({length:30}, (_,i)=>Math.round(8+Math.random()*10));
+        const mtrs=[
+          {num:'MTR-48291', daily:mkDaily(), monthly:Math.round(280+Math.random()*120), estado:'online', servicio:'normal'},
+          {num:'MTR-51022', daily:mkDaily(), monthly:Math.round(320+Math.random()*140), estado:'online', servicio:'alerta'},
+          {num:'MTR-40404', daily:mkDaily(), monthly:Math.round(200+Math.random()*90), estado:'offline', servicio:'normal'},
+        ];
+        save(KEY_MTRS, mtrs);
+      }
+    }
+    ensureDemoData();
+
+    // ===== REPORTES TÉCNICOS =====
+    function readAlertas(){ return load(KEY_ALERTS, []) }
+    function writeAlertas(arr){ save(KEY_ALERTS, arr); refreshTabla(); }
+
+    function crearAlertaFromForm(){
+      const t = $('#rep_titulo').value.trim();
+      const c = $('#rep_categoria').value; const p = $('#rep_prioridad').value;
+      if(!t){ toast('Ingresá un título'); return }
+      const sess = load(KEY_SESSION);
+      const a = {
+        id: Math.random().toString(36).slice(2,9),
+        titulo: t, categoria: c, prioridad: p,
+        medidor: $('#rep_medidor').value.trim(),
+        ubicacion: $('#rep_ubicacion').value.trim(),
+        desc: $('#rep_desc').value.trim(),
+        adjunto: $('#rep_file').files?.[0]?.name || null,
+        estado: 'abierta', creador: 'externo', creadorEmail: sess?.email || null,
+        ts: new Date().toISOString()
+      };
+      const arr = readAlertas(); arr.unshift(a); writeAlertas(arr);
+      $('#rep_titulo').value = ''; $('#rep_desc').value=''; $('#rep_medidor').value=''; $('#rep_ubicacion').value=''; $('#rep_file').value='';
+      toast('Reporte enviado');
+    }
+    $('#btnCrear').addEventListener('click', crearAlertaFromForm);
+
+    function refreshTabla(){
+      const tbody = $('#tablaAlertas tbody');
+      const q = ($('#filtroTxt').value||'').toLowerCase();
+      const fE = $('#filtroEstado').value; const fC = $('#filtroCat').value;
+      const sess = load(KEY_SESSION);
+      const arr = readAlertas().filter(a=> a.creador==='externo' && a.creadorEmail===sess?.email );
+      const filt = arr.filter(a=>{
+        const hit = (a.titulo+' '+a.medidor+' '+a.ubicacion).toLowerCase().includes(q);
+        const okE = !fE || a.estado===fE; const okC = !fC || a.categoria===fC; return hit && okE && okC;
+      });
+      tbody.innerHTML = filt.map((a,i)=>{
+        const pill = `<span class="pill" data-s="${a.estado}">${a.estado.replace('_',' ')}</span>`;
+        return `<tr>
+          <td>${i+1}</td>
+          <td title="${a.desc||''}">${a.titulo}</td>
+          <td>${a.categoria}</td>
+          <td>${a.prioridad}</td>
+          <td>${a.medidor||'-'}</td>
+          <td>${a.ubicacion||'-'}</td>
+          <td>${pill}</td>
+        </tr>`;
+      }).join('');
+    }
+    ['#filtroTxt','#filtroEstado','#filtroCat'].forEach(id=> $(id).addEventListener('input', refreshTabla));
+
+    $('#btnDemoRep').addEventListener('click', ()=>{
+      const sess = load(KEY_SESSION);
+      const demo=[
+        {id:'d1',titulo:'Corte sector Noroeste',categoria:'corte',prioridad:'alta',medidor:'CL-00912',ubicacion:'B° Altos del Norte',desc:'Sin servicio desde 14:20',adjunto:null,estado:'abierta',creador:'externo',creadorEmail:sess?.email,ts:new Date(Date.now()-86400000*3).toISOString()},
+        {id:'d2',titulo:'Pico de consumo - Mza 12',categoria:'consumo',prioridad:'media',medidor:'MTR-48291',ubicacion:'Mza 12, Casa 7',desc:'Lectura IoT > umbral',adjunto:null,estado:'en_proceso',creador:'externo',creadorEmail:sess?.email,ts:new Date(Date.now()-86400000*2).toISOString()},
+      ];
+      const arr=readAlertas(); save(KEY_ALERTS, demo.concat(arr)); refreshTabla(); toast('Se cargaron ejemplos');
+    });
+
+    // ===== GESTIONES COMERCIALES =====
+    function loadClienteUI(){
+      const c = load(KEY_CLIENTE);
+      if(!c) return;
+      $('#cli_id').value = c.id || '';
+      $('#cli_tipo').value = c.tipo || '';
+      $('#cli_estado').textContent = 'Cargado';
+    }
+    $('#cli_guardar').addEventListener('click', ()=>{
+      const id = $('#cli_id').value.trim();
+      const tipo = $('#cli_tipo').value;
+      save(KEY_CLIENTE, {id, tipo});
+      $('#cli_estado').textContent = 'Guardado';
+      $('#chipTipo').textContent = 'Tipo: ' + (tipo || '-');
+      toast('Datos de cliente guardados');
+    });
+
+    // Facturas
+    function renderFacturas(){
+      const fact = load(KEY_FACT, []);
+      const tb = $('#tablaFacturas tbody');
+      tb.innerHTML = fact.map(f=>`
+        <tr>
+          <td>${f.id}</td>
+          <td>${f.periodo}</td>
+          <td>${f.kwh}</td>
+          <td>${fmtARS(f.importe)}</td>
+          <td>${f.estado}</td>
+          <td>
+            <button class="btn" data-dl="${f.id}">Descargar</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+    // Descarga simple (HTML->blob PDF-like)
+    document.addEventListener('click', (e)=>{
+      const id = e.target?.getAttribute?.('data-dl');
+      if(!id) return;
+      const f = load(KEY_FACT, []).find(x=>x.id===id);
+      if(!f) return;
+      const html = `
+        <html><head><meta charset="utf-8"><title>${f.id}</title></head>
+        <body style="font-family:Arial;padding:24px">
+          <h1>Factura ${f.id}</h1>
+          <p><b>Periodo:</b> ${f.periodo}</p>
+          <p><b>Consumo:</b> ${f.kwh} kWh</p>
+          <p><b>Importe:</b> ${fmtARS(f.importe)}</p>
+          <p><b>Estado:</b> ${f.estado}</p>
+          <hr><small>Documento de demostración</small>
+        </body></html>`;
+      const blob = new Blob([html], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=`${f.id}.html`; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Export CSV
+    function toCSV(rows){
+      const headers = Object.keys(rows[0]||{});
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      const lines = [headers.join(',')].concat(rows.map(r=>headers.map(h=>esc(r[h])).join(',')));
+      return lines.join('\n');
+    }
+    $('#btnExportFact').addEventListener('click', ()=>{
+      const fact = load(KEY_FACT, []);
+      const csv = toCSV(fact);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='facturas.csv'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Pagos (demo)
+    function pushPago(medio, estado){
+      const arr = load(KEY_PAGOS, []);
+      arr.push({id:'PAY-'+(1000+arr.length), medio, estado, ts:new Date().toISOString()});
+      save(KEY_PAGOS, arr);
+      renderPagos();
+    }
+    function renderPagos(){
+      const arr = load(KEY_PAGOS, []);
+      $('#pagosLog').innerHTML = arr.slice(-5).reverse().map(p=>`• ${p.id} — ${p.medio.toUpperCase()} — ${p.estado} — ${new Date(p.ts).toLocaleString('es-AR')}`).join('<br>');
+    }
+    $('[data-pay="mp"]').addEventListener('click', ()=> pushPago('MercadoPago', Math.random()<0.85?'aprobado':'fallido'));
+    $('[data-pay="pmc"]').addEventListener('click', ()=> pushPago('PagoMisCuentas', Math.random()<0.8?'aprobado':'pendiente'));
+    $('[data-pay="link"]').addEventListener('click', ()=> pushPago('Link', Math.random()<0.8?'aprobado':'fallido'));
+    $('#btnVerPagos').addEventListener('click', renderPagos);
+
+    // Consumo mensual: gráfico + comparativas
+    let chartConsumo;
+    function renderConsumo(){
+      const cons = load(KEY_CONS, []);
+      const labels = cons.map(c=>c.periodo);
+      const data = cons.map(c=>c.kwh);
+      if(chartConsumo) chartConsumo.destroy();
+      chartConsumo = new Chart($('#chartConsumo'), {
+        type:'bar', data:{labels, datasets:[{label:'kWh', data}]},
+        options:{responsive:true, plugins:{legend:{display:false}}}
+      });
+
+      // Comparativas
+      const n=cons.length;
+      const actual = cons[n-1]?.kwh ?? 0;
+      const anterior = cons[n-2]?.kwh ?? 0;
+      // mismo mes año pasado (si hubiera 12 previos)
+      const inter = cons[n-13]?.kwh ?? '-';
+      $('#cmpActual').textContent = actual || '-';
+      $('#cmpAnterior').textContent = anterior || '-';
+      $('#cmpInter').textContent = inter;
+      const varPct = anterior? (((actual-anterior)/anterior)*100).toFixed(1)+' %' : '-';
+      $('#cmpVar').textContent = varPct;
+    }
+
+    // ===== MEDIDOR INTELIGENTE =====
+    let chartDaily;
+    function buscarMedidor(num){
+      const db = load(KEY_MTRS, []);
+      const m = db.find(x=>x.num.toLowerCase()===num.toLowerCase());
+      if(!m){ toast('Medidor no encontrado'); return; }
+      $('#mtr_diario').textContent = m.daily[m.daily.length-1] + ' kWh';
+      $('#mtr_mensual').textContent = m.monthly + ' kWh';
+      $('#mtr_estado').textContent = 'Medidor: ' + (m.estado==='online'?'Online':'Offline');
+      $('#mtr_servicio').textContent = 'Servicio: ' + (m.servicio==='normal'?'Normal':'Alerta');
+
+      const labels = Array.from({length:m.daily.length}, (_,i)=> `Día ${i+1}`);
+      if(chartDaily) chartDaily.destroy();
+      chartDaily = new Chart($('#chartDaily'), {
+        type:'line',
+        data:{labels,datasets:[{label:'kWh/día',data:m.daily,tension:.35}]},
+        options:{responsive:true,plugins:{legend:{display:false}}}
+      });
+      toast('Medidor cargado');
+    }
+    $('#mtr_buscar').addEventListener('click', ()=> {
+      const num = $('#mtr_input').value.trim(); if(!num) return toast('Ingresá un número de medidor');
+      buscarMedidor(num);
+    });
+    $('#mtr_demo').addEventListener('click', ()=>{
+      const db = load(KEY_MTRS, []); if(db.length){ $('#mtr_input').value=db[0].num; buscarMedidor(db[0].num); }
+    });
+
+    // ===== INIT =====
+    function init(){
+      loadClienteUI();
+      refreshTabla();
+      renderFacturas();
+      renderPagos();
+      renderConsumo();
+    }
+    window.addEventListener('storage', init);
+    init();
+  </script>
+</body>
+</html>
