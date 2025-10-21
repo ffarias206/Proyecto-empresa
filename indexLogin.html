@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ConectaEnergIA — Acceso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0b12; --panel:#121422; --elev:#171a2a; --ink:#eef2ff; --muted:#a6b0cf;
+      --acc:#67e8f9; --acc2:#a78bfa; --ok:#22c55e; --danger:#ef4444;
+      --r:16px; --shadow:0 10px 30px rgba(0,0,0,.35)
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:linear-gradient(180deg,#0a0b12 0%, #0b0f1c 60%, #0a0b12 100%);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto;min-height:100%}
+    a{color:var(--acc);text-decoration:none}
+    .wrap{max-width:960px;margin:0 auto;padding:24px}
+
+    .top{position:sticky;top:0;z-index:10;background:rgba(10,12,18,.6);backdrop-filter:blur(10px);border-bottom:1px solid #1d2240}
+    .top__bar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px}
+    .brand{display:flex;gap:10px;align-items:center;font-weight:700}
+    .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:var(--shadow)}
+
+    .center{display:grid;place-items:center;padding:40px 18px}
+    .card{width:min(100%,560px);background:var(--panel);border:1px solid #1d2240;border-radius:20px;padding:22px 22px 18px;box-shadow:var(--shadow)}
+    .title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .subtitle{color:var(--muted);margin:0 0 14px}
+
+    .grid{display:grid;gap:12px}
+    .g-2{grid-template-columns:1fr 1fr}
+    @media (max-width:720px){.g-2{grid-template-columns:1fr}}
+
+    .field{display:grid;gap:6px}
+    label{font-size:.95rem}
+    input,select,button{font-family:inherit}
+    input,select{background:var(--elev);border:1px solid #273058;color:var(--ink);padding:10px 12px;border-radius:12px}
+
+    .btn{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#0a0b12;border:none;padding:12px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--ink);border:1px solid #2a3563}
+    .tabs{display:flex;background:rgba(255,255,255,.03);border:1px solid #273058;border-radius:12px;overflow:hidden}
+    .tab{flex:1;padding:10px 12px;text-align:center;cursor:pointer;font-weight:600}
+    .tab.active{background:linear-gradient(135deg,rgba(103,232,249,.18),rgba(167,139,250,.18))}
+    .muted{color:var(--muted);font-size:.95rem}
+    .hint{font-size:.9rem;color:var(--muted)}
+    .error,.ok{padding:8px 10px;border-radius:10px;display:none}
+    .error{background:rgba(239,68,68,.12);border:1px solid #3a1f24;color:#ffb4b4}
+    .ok{background:rgba(34,197,94,.12);border:1px solid #1f3a2a;color:#b9f6c1}
+
+    .password{position:relative}
+    .toggle-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:.9rem;cursor:pointer;color:var(--muted)}
+    .foot{margin-top:14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #2a3563;border-radius:999px;font-size:.85rem;color:#dfe6fb}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top__bar wrap">
+      <div class="brand"><span class="logo"></span> ConectaEnergIA</div>
+    </div>
+  </header>
+
+  <main class="center">
+    <div class="card">
+      <div class="title">
+        <h1 style="margin:0;font-size:1.25rem">Acceso a la plataforma</h1>
+      </div>
+      <p class="subtitle">Elegí tu rol. Para operadores se registra además el <b>Área de trabajo</b>.</p>
+
+      <!-- Selector de rol + tabs -->
+      <div class="grid g-2" style="margin-bottom:10px">
+        <div class="field">
+          <label for="roleSel">Rol</label>
+          <select id="roleSel">
+            <option value="externo">Usuario / Cliente</option>
+            <option value="operador">Empleado / Operador</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="tabs" role="tablist" aria-label="Modo de acceso">
+            <div class="tab active" data-tab="login" role="tab" aria-selected="true">Iniciar sesión</div>
+            <div class="tab" data-tab="signup" role="tab" aria-selected="false">Crear cuenta</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="msgError" class="error"></div>
+      <div id="msgOk" class="ok"></div>
+
+      <!-- LOGIN -->
+      <form id="formLogin" class="grid" autocomplete="on">
+        <!-- Área visible solo si rol=operador (informativa, no obligatoria para login) -->
+        <div class="field" id="loginAreaWrap" style="display:none">
+          <label>Área </label>
+          <div class="chip" id="loginAreaChip">No especificada</div>
+          <span class="hint">Se mostrará el área de la cuenta una vez ingreses email/contraseña correctos.</span>
+        </div>
+
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" placeholder="usuario@correo.com" required>
+        </div>
+        <div class="field password">
+          <label for="loginPass">Contraseña</label>
+          <input id="loginPass" type="password" placeholder="••••••••" minlength="6" required>
+          <span class="toggle-eye" data-for="loginPass">👁️</span>
+        </div>
+        <label class="hint"><input id="remember" type="checkbox"> Mantener sesión iniciada</label>
+        <button class="btn" type="submit">Ingresar</button>
+      </form>
+
+      <!-- SIGNUP -->
+      <form id="formSignup" class="grid" style="display:none" autocomplete="off">
+        <div class="grid g-2">
+          <div class="field">
+            <label for="suNombre">Nombre</label>
+            <input id="suNombre" placeholder="Nombre y apellido" required>
+          </div>
+          <div class="field">
+            <label for="suEmail">Email</label>
+            <input id="suEmail" type="email" placeholder="usuario@correo.com" required>
+          </div>
+        </div>
+
+        <!-- Área requerida SOLO cuando currentRole = operador -->
+        <div class="field" id="suAreaWrap" style="display:none">
+          <label for="suArea">Área de trabajo</label>
+          <select id="suArea">
+            <option value="">Seleccioná un área</option>
+            <option>Comunicación</option>
+            <option>Recursos Humanos</option>
+            <option>Técnico</option>
+            <option>Comercial</option>
+          </select>
+        </div>
+
+        <div class="grid g-2">
+          <div class="field password">
+            <label for="suPass">Contraseña</label>
+            <input id="suPass" type="password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+            <span class="toggle-eye" data-for="suPass">👁️</span>
+          </div>
+          <div class="field password">
+            <label for="suPass2">Repetir contraseña</label>
+            <input id="suPass2" type="password" placeholder="Repetí la contraseña" minlength="6" required>
+            <span class="toggle-eye" data-for="suPass2">👁️</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="suMeta">Identificador opcional</label>
+          <input id="suMeta" placeholder="Ej: ID de cliente, legajo, etc.">
+        </div>
+
+        <button class="btn" type="submit">Crear cuenta</button>
+        <button class="btn ghost" type="button" id="btnDemo">Cargar demo</button>
+        <span class="hint">Las cuentas se guardan localmente por rol (solo pruebas sin backend).</span>
+      </form>
+
+      <div class="foot">
+        <span class="muted">Soporte: <a href="#">contacto@plataforma.com</a></span>
+        <a class="muted" href="#">Términos y privacidad</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ===== Storage =====
+    const KEY_USERS = role => `mx_users_${role}`; // {email, pass, nombre, meta, area?}
+    const KEY_SESSION = 'mx_session';
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const load = (k, d=[]) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } };
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+    // ===== Estado UI =====
+    let currentRole = 'externo';
+    const roleSel = $('#roleSel');
+    const tabs = $$('.tab');
+    const formLogin = $('#formLogin');
+    const formSignup = $('#formSignup');
+    const suAreaWrap = $('#suAreaWrap');
+    const suArea = $('#suArea');
+    const loginAreaWrap = $('#loginAreaWrap');
+    const loginAreaChip = $('#loginAreaChip');
+    const msgError = $('#msgError');
+    const msgOk = $('#msgOk');
+
+    function show(ok=false, text=''){
+      msgError.style.display='none'; msgOk.style.display='none';
+      if(!text) return;
+      (ok?msgOk:msgError).textContent = text;
+      (ok?msgOk:msgError).style.display = 'block';
+    }
+
+    // Cambiar rol
+    function applyRoleUI(){
+      const isOperador = currentRole === 'operador';
+      // Área requerido en signup si es operador
+      suAreaWrap.style.display = isOperador ? '' : 'none';
+      // Área informativa en login (se completa tras login)
+      loginAreaWrap.style.display = isOperador ? '' : 'none';
+    }
+    roleSel.addEventListener('change', e=>{
+      currentRole = e.target.value;
+      applyRoleUI();
+      show(true, `Rol seleccionado: ${currentRole==='externo'?'Usuario/Cliente':'Empleado/Operador'}`);
+    });
+    applyRoleUI();
+
+    // Tabs
+    tabs.forEach(t => t.addEventListener('click', ()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const isLogin = t.dataset.tab === 'login';
+      formLogin.style.display = isLogin ? '' : 'none';
+      formSignup.style.display = isLogin ? 'none' : '';
+      show(false,'');
+    }));
+
+    // Toggle ver contraseña
+    $$('.toggle-eye').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-for');
+        const input = document.getElementById(id);
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+    });
+
+    // ===== SIGNUP =====
+    formSignup.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const nombre = $('#suNombre').value.trim();
+      const email = $('#suEmail').value.trim().toLowerCase();
+      const pass = $('#suPass').value;
+      const pass2 = $('#suPass2').value;
+      const meta = $('#suMeta').value.trim();
+      const isOperador = currentRole==='operador';
+      const areaVal = isOperador ? suArea.value : '';
+
+      if(!nombre || !email || !pass || !pass2) return show(false, 'Completá todos los campos obligatorios.');
+      if(pass.length<6) return show(false, 'La contraseña debe tener al menos 6 caracteres.');
+      if(pass!==pass2) return show(false, 'Las contraseñas no coinciden.');
+      if(isOperador && !areaVal) return show(false, 'Seleccioná un área de trabajo para operadores.');
+
+      const key = KEY_USERS(currentRole);
+      const users = load(key);
+      if(users.some(u=>u.email===email)) return show(false, 'Ya existe una cuenta con ese email para este rol.');
+
+      users.push({email, pass, nombre, meta, area: areaVal || null, createdAt: new Date().toISOString()});
+      save(key, users);
+      show(true, 'Cuenta creada con éxito. Ya podés iniciar sesión.');
+      $('#suPass').value=''; $('#suPass2').value='';
+      // Cambiamos a login y sugerimos email
+      tabs.find(x=>x.dataset.tab==='login').click();
+      $('#loginEmail').value=email;
+    });
+
+    // Demo users incluye operador con área
+    $('#btnDemo')?.addEventListener('click', ()=>{
+      const key = KEY_USERS(currentRole);
+      const users = load(key);
+      const demo = currentRole==='operador'
+        ? [{email:'operador@demo.com', pass:'123456', nombre:'Operador Demo', meta:'Legajo 102', area:'Técnico'}]
+        : [{email:'cliente@demo.com', pass:'123456', nombre:'Cliente Demo', meta:'CL-00912'}];
+
+      demo.forEach(u=>{
+        if(!users.some(x=>x.email===u.email)){
+          users.push({...u, createdAt:new Date().toISOString()});
+        }
+      });
+      save(key, users);
+      show(true, currentRole==='operador'
+        ? 'Operador demo cargado: operador@demo.com / 123456 (Área: Técnico).'
+        : 'Cliente demo cargado: cliente@demo.com / 123456.');
+    });
+
+    // ===== LOGIN =====
+    formLogin.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const email = $('#loginEmail').value.trim().toLowerCase();
+      const pass = $('#loginPass').value;
+      const users = load(KEY_USERS(currentRole));
+      const user = users.find(u=>u.email===email && u.pass===pass);
+      if(!user) return show(false, 'Credenciales inválidas para este rol.');
+
+      const remember = $('#remember').checked;
+      const sessionData = {
+        email:user.email,
+        nombre:user.nombre,
+        role:currentRole,
+        area:user.area || null,
+        ts:new Date().toISOString(),
+        remember
+      };
+      save(KEY_SESSION, sessionData);
+
+      // Si es operador, mostramos el área
+      if(currentRole==='operador'){
+        loginAreaChip.textContent = user.area || 'No especificada';
+      }
+
+      show(true, `Bienvenido, ${user.nombre}${currentRole==='operador' && user.area ? ` — Área: ${user.area}`:''}. Autenticación OK.`);
+      setTimeout(()=>{
+  window.location.href = currentRole === 'externo'
+    ? 'index.html#reportes'      // lleva directo al área cliente
+    : 'operador.html#dashboard'; // (o lo que uses para el operador)
+}, 800);
+    });
+
+    // Autologin si hay sesión recordada (demo)
+    (function boot(){
+      const sess = load(KEY_SESSION, null);
+      if(sess?.remember){
+        currentRole = sess.role || 'externo';
+        roleSel.value = currentRole;
+        applyRoleUI();
+        show(true, `Sesión recordada: ${sess.nombre}${sess.area?` — Área: ${sess.area}`:''}. Redirigiendo…`);
+        setTimeout(()=>{
+  window.location.href = currentRole === 'externo'
+    ? 'index.html#reportes'
+    : 'operador.html#dashboard';
+}, 700);
+      }
+    })();
+  </script>
+</body>
+</html>
